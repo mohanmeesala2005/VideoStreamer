@@ -1,10 +1,30 @@
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
+const ffmpeg = require('fluent-ffmpeg');
 const Video = require('../models/Video');
 const User = require('../models/User');
+const { analyzeVideoSensitivity } = require("../services/sensitivity");
 
-// Socket.io instance will be available via req.app.get('io')
+const processVideo = async (videoId, io) => {
+  const video = await Video.findById(videoId);
+  if (!video) return;
+
+  io?.emit("processing-update", { videoId, progress: 20, status: "processing" });
+
+  const result = await analyzeVideoSensitivity(video.filepath, videoId);
+
+  await Video.findByIdAndUpdate(videoId, {
+    status: result.isSafe ? "safe" : "flagged",
+    processingProgress: 100,
+    flagReason: result.reason || null,
+  });
+
+  io?.emit("processing-complete", {
+    videoId,
+    status: result.isSafe ? "safe" : "flagged",
+  });
+};
 
 // Upload video
 const uploadVideo = async (req, res) => {
@@ -22,12 +42,6 @@ const uploadVideo = async (req, res) => {
             return res.status(400).json({ error: 'Title is required' });
         }
 
-        // In a real GridFS implementation, we would write stream here
-        // For now, staying with file system storage but using MongoDB for metadata
-        // Integrating GridFS would require streaming from Multer directly (via multer-gridfs-storage)
-        // or piping from disk to GridFS. For simplicity and robustness given the prompt constraints,
-        // I'll stick to disk storage but use MongoDB's full capabilities for metadata.
-
         const video = await Video.create({
             title,
             description: description || '',
@@ -44,8 +58,11 @@ const uploadVideo = async (req, res) => {
             io.emit('upload-complete', { videoId: video._id, status: 'uploaded' });
         }
 
-        // Start sensitivity processing simulation (or real logic if implemented)
-        simulateProcessing(video._id, io);
+        // Extract thumbnail and get duration
+        extractThumbnailAndDuration(video._id, filepath);
+        
+        // Start real video processing (frame analysis + audio analysis)
+        processVideo(video._id, io);
 
         res.status(201).json({
             message: 'Video uploaded successfully',
@@ -63,78 +80,49 @@ const uploadVideo = async (req, res) => {
     }
 };
 
-// Simulate video processing with Socket.io updates
-const simulateProcessing = async (videoId, io) => {
+// Extract thumbnail and probe duration
+const extractThumbnailAndDuration = async (videoId, filepath) => {
     try {
-        await Video.findByIdAndUpdate(videoId, { status: 'processing', processingProgress: 0 });
+        // Ensure thumbnails directory exists
+        const thumbnailsDir = path.join(__dirname, '..', 'uploads', 'thumbnails');
+        if (!fs.existsSync(thumbnailsDir)) fs.mkdirSync(thumbnailsDir, { recursive: true });
 
-        if (io) {
-            io.to(`video-${videoId}`).emit('processing-update', {
-                videoId,
-                progress: 0,
-                status: 'processing',
-                step: 'initializing'
-            });
-        }
-
-        let progress = 0;
-        const interval = setInterval(async () => {
-            progress += Math.floor(Math.random() * 15) + 5;
-
-            if (progress >= 100) {
-                progress = 100;
-                clearInterval(interval);
-
-                // Randomly flag some videos (20% chance)
-                const isFlagged = Math.random() < 0.2;
-                const status = isFlagged ? 'flagged' : 'safe';
-                const flagReason = isFlagged ? 'Contains potentially sensitive content (Simulated AI Analysis)' : null;
-
-                await Video.findByIdAndUpdate(videoId, {
-                    status,
-                    processingProgress: 100,
-                    flagReason,
-                    'analysisResults.overall.isSafe': !isFlagged,
-                    'analysisResults.overall.score': isFlagged ? 0.85 : 0.1
-                });
-
-                if (io) {
-                    io.to(`video-${videoId}`).emit('processing-update', {
-                        videoId,
-                        progress: 100,
-                        status,
-                        step: 'complete'
-                    });
-                    io.emit('processing-complete', { videoId, status });
-                }
-
-                console.log(`✅ Video ${videoId} processing complete: ${status}`);
-            } else {
-                await Video.findByIdAndUpdate(videoId, { processingProgress: progress });
-
-                // Detailed step simulation
-                let step = 'analyzing';
-                if (progress < 30) step = 'extracting-frames';
-                else if (progress < 60) step = 'analyzing-content';
-                else if (progress < 90) step = 'audio-transcription';
-                else step = 'finalizing';
-
-                if (io) {
-                    io.to(`video-${videoId}`).emit('processing-update', {
-                        videoId,
-                        progress,
-                        status: 'processing',
-                        step
-                    });
-                }
+        // Probe for duration
+        ffmpeg.ffprobe(filepath, async (err, metadata) => {
+            if (!err && metadata && metadata.format && metadata.format.duration) {
+                const durationSeconds = Math.floor(metadata.format.duration);
+                const hrs = Math.floor(durationSeconds / 3600);
+                const mins = Math.floor((durationSeconds % 3600) / 60);
+                const secs = durationSeconds % 60;
+                const formatted = hrs > 0 
+                    ? `${hrs}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}` 
+                    : `${mins}:${String(secs).padStart(2,'0')}`;
+                await Video.findByIdAndUpdate(videoId, { duration: formatted });
             }
-        }, 1500);
-    } catch (error) {
-        console.error('Processing error:', error);
+        });
+
+        // Extract thumbnail
+        const thumbnailFilename = `${videoId}.jpg`;
+        const thumbnailPath = path.join(thumbnailsDir, thumbnailFilename);
+
+        ffmpeg(filepath)
+            .screenshots({
+                timestamps: ['50%'],
+                filename: thumbnailFilename,
+                folder: thumbnailsDir,
+                size: '640x?'
+            })
+            .on('end', async () => {
+                const publicPath = `/uploads/thumbnails/${thumbnailFilename}`;
+                await Video.findByIdAndUpdate(videoId, { thumbnail: publicPath });
+            })
+            .on('error', (err) => {
+                console.error('FFmpeg thumbnail error:', err);
+            });
+    } catch (ffErr) {
+        console.error('Thumbnail extraction error:', ffErr);
     }
 };
-
-// Get all videos
 const getVideos = async (req, res) => {
     try {
         const { status, search } = req.query;
@@ -288,5 +276,6 @@ module.exports = {
     getVideo,
     streamVideo,
     incrementViews,
-    deleteVideo
+    deleteVideo,
+    processVideo
 };

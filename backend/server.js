@@ -13,6 +13,7 @@ const userRoutes = require('./routes/users');
 // Connect to MongoDB
 connectDB();
 
+const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
@@ -33,6 +34,9 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files (thumbnails, stored videos if needed) as static assets
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Socket.io connection handler
 io.on('connection', (socket) => {
@@ -66,7 +70,7 @@ app.use((err, req, res, next) => {
 
 // Start server (using server.listen for socket.io, not app.listen)
 server.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📊 API endpoints available at http://localhost:${PORT}/api`);
-    console.log(`🔌 Socket.io initialized`);
+    console.log(` Server running on http://localhost:${PORT}`);
+    console.log(`API endpoints available at http://localhost:${PORT}/api`);
+    console.log(`Socket.io initialized`);
 });
