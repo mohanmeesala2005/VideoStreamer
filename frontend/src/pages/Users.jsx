@@ -9,6 +9,9 @@ const UsersPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  const [deleteSuccess, setDeleteSuccess] = useState(null);
 
   if (!hasPermission(ROLES.ADMIN)) {
     return <Navigate to="/dashboard" />;
@@ -33,6 +36,35 @@ const UsersPage = () => {
     fetchUsers();
   }, []);
 
+  // Handle delete user
+  const handleDeleteUser = async (userId) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this user? This action cannot be undone.",
+      )
+    ) {
+      return;
+    }
+
+    setDeleting(userId);
+    setDeleteError(null);
+    setDeleteSuccess(null);
+
+    try {
+      await usersAPI.delete(userId);
+      setUsers(users.filter((u) => u.id !== userId));
+      setDeleteSuccess("User deleted successfully");
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setDeleteSuccess(null), 3000);
+    } catch (err) {
+      console.error("Failed to delete user:", err);
+      setDeleteError(err.message || "Failed to delete user");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -43,14 +75,24 @@ const UsersPage = () => {
             Manage users and their permissions
           </p>
         </div>
-        <button
-          className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-3 
-                         rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl
-                         transform hover:-translate-y-0.5"
-        >
-          Add New User
-        </button>
       </div>
+
+      {/* Success Message */}
+      {deleteSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start space-x-3">
+          <div className="flex-1">
+            <p className="text-green-800 font-medium">{deleteSuccess}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Error Message */}
+      {deleteError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start space-x-3">
+          <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
+          <p className="text-red-800">{deleteError}</p>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -156,7 +198,7 @@ const UsersPage = () => {
               <tbody className="divide-y divide-gray-200">
                 {users.map((user) => (
                   <tr
-                    key={user._id || user.id}
+                    key={user.id}
                     className="hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-6 py-4">
@@ -192,11 +234,16 @@ const UsersPage = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
-                        <button className="text-primary-600 hover:text-primary-700 font-medium text-sm">
-                          Edit
-                        </button>
-                        <button className="text-red-600 hover:text-red-700 font-medium text-sm">
-                          <Trash2 className="h-4 w-4" />
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          disabled={deleting === user.id}
+                          className="text-red-600 hover:text-red-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deleting === user.id ? (
+                            <Loader className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </button>
                       </div>
                     </td>

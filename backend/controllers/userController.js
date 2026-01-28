@@ -52,29 +52,6 @@ const getUser = async (req, res) => {
     }
 };
 
-const updateUser = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, email, role } = req.body;
-
-        const user = await User.findById(id);
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        if (name) user.name = name;
-        if (email) user.email = email;
-        if (role) user.role = role;
-
-        await user.save();
-
-        res.json({ message: 'User updated successfully' });
-    } catch (error) {
-        console.error('Update user error:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
-};
-
 const deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
@@ -91,4 +68,4 @@ const deleteUser = async (req, res) => {
     }
 };
 
-module.exports = { getUsers, getUser, updateUser, deleteUser };
+module.exports = { getUsers, getUser, deleteUser };
