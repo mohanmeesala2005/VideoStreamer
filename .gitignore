@@ -1,0 +1,18 @@
+# Node
+node_modules/
+**/node_modules/
+
+# Environment
+.env
+
+# Uploads / binaries
+backend/uploads/
+*.mp4
+
+# Cache
+.cache/
+**/.cache/
+
+# Build
+dist/
+build/
