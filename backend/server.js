@@ -10,6 +10,7 @@ const videoRoutes = require('./routes/videos');
 const userRoutes = require('./routes/users');
 
 const path = require('path');
+const mongoose = require('mongoose');
 const app = express();
 const server = http.createServer(app);
 
@@ -140,9 +141,31 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: err.message || 'Something went wrong!' });
 });
 
-// Start server (using server.listen for socket.io, not app.listen)
-server.listen(PORT, () => {
-    console.log(` Server running on http://localhost:${PORT}`);
-    console.log(`API endpoints available at http://localhost:${PORT}/api`);
-    console.log(`Socket.io initialized`);
-});
+// Connect to MongoDB first, then start server (ensures Mongoose is ready)
+const startServer = async () => {
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    if (!mongoUri) {
+        console.error('Missing MONGODB_URI in environment. Set it in .env');
+        process.exit(1);
+    }
+
+    try {
+        await mongoose.connect(mongoUri, {
+            // Mongoose v6+ no longer requires these options, but keep sensible defaults
+            serverSelectionTimeoutMS: 5000
+        });
+
+        console.log('MongoDB connected');
+
+        server.listen(PORT, () => {
+            console.log(` Server running on http://localhost:${PORT}`);
+            console.log(`API endpoints available at http://localhost:${PORT}/api`);
+            console.log(`Socket.io initialized`);
+        });
+    } catch (err) {
+        console.error('Failed to connect to MongoDB:', err.message || err);
+        process.exit(1);
+    }
+};
+
+startServer();

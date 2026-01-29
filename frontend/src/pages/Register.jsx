@@ -208,7 +208,6 @@ const Register = () => {
               >
                 <option value="viewer">Viewer (Read-only access)</option>
                 <option value="editor">Editor (Upload & manage videos)</option>
-                <option value="admin">Admin (Full system access)</option>
               </select>
             </div>
 

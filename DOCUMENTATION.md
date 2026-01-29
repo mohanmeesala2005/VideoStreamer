@@ -59,7 +59,6 @@ The project follows a modern **MERN** architecture.
 *   `.gitignore`: Global ignore rules.
 
 ### Backend Breakdown
-*   `config/`: Configuration files (e.g., `database.js`).
 *   `controllers/`: Request handlers (e.g., `videoController.js`, `authController.js`).
 *   `middleware/`: Custom Express middleware (e.g., `auth.js` for JWT verification).
 *   `models/`: Mongoose schemas (e.g., `User.js`, `Video.js`).
@@ -82,7 +81,7 @@ The project follows a modern **MERN** architecture.
 
 ### Prerequisites
 *   **Node.js** (v18+ recommended)
-*   **NPM** or **Yarn**
+*   **NPM** 
 *   **FFmpeg** installed on the host system (critical for video processing)
 *   **MongoDB** (Local or Atlas instance)
 
