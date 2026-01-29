@@ -27,7 +27,7 @@ In the modern digital landscape, video content consumption is at an all-time hig
 
 ## 2. Tech Stack & Architecture
 
-The project follows a modern **MERN-like** architecture (using SQLite/MongoDB interchangeably in some contexts, but primarily MongoDB for the core application data).
+The project follows a modern **MERN** architecture.
 
 ### Frontend
 *   **React (Vite)**: For a fast, modular UI development experience.
@@ -177,20 +177,6 @@ While currently using local storage, the `Video` model includes a `fileId` field
 ---
 
 ## 10. Future Improvements
-*   **Transcoding**: Implementation of HLS/DASH for adaptive bitrate streaming.
-*   **Advanced AI**: Moving beyond red-pixel detection to a full NSFW model using `nsfwjs` (partially implemented in dependencies).
+*   **Advanced AI**: Moving beyond red-pixel detection to a full llm for the detection of any sensitive content.
 *   **Cloud Storage**: Integration with AWS S3 or Google Cloud Storage for the video assets.
-*   **Unit/Integration Testing**: Adding Jest and Supertest for API coverage.
-
 ---
-
-## 11. Contribution Guidelines
-We welcome contributions!
-1.  **Fork** the repo.
-2.  **Create a feature branch** (`git checkout -b feature/AmazingFeature`).
-3.  **Commit your changes** (`git commit -m 'Add some AmazingFeature'`).
-4.  **Push to the branch** (`git push origin feature/AmazingFeature`).
-5.  **Open a Pull Request**.
-
----
-*Documentation maintained by the Pulse Engineering Team.*

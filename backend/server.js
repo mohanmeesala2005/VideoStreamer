@@ -3,15 +3,11 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
-const { connectDB } = require('./config/database');
 
 // Import routes
 const authRoutes = require('./routes/auth');
 const videoRoutes = require('./routes/videos');
 const userRoutes = require('./routes/users');
-
-// Connect to MongoDB
-connectDB();
 
 const path = require('path');
 const app = express();
@@ -99,7 +95,7 @@ async function startSensitivityAnalysis(videoId, ioInstance, socketInstance = nu
 
 // Socket.io connection handler
 io.on('connection', (socket) => {
-    console.log(`🔌 New client connected: ${socket.id}`);
+    console.log(`New client connected: ${socket.id}`);
 
     socket.on('join-video-room', (videoId) => {
         socket.join(`video-${videoId}`);
