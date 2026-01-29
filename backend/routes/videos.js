@@ -47,6 +47,7 @@ router.get('/:id', authMiddleware, getVideo);
 router.post('/upload', authMiddleware, requireRole('editor', 'admin'), upload.single('video'), uploadVideo);
 router.get('/:id/stream', authMiddleware, streamVideo);
 router.patch('/:id/view', authMiddleware, incrementViews);
-router.delete('/:id', authMiddleware, requireRole('admin'), deleteVideo);
+// Allow uploader or admin to delete a video; check permissions inside controller
+router.delete('/:id', authMiddleware, deleteVideo);
 
 module.exports = router;

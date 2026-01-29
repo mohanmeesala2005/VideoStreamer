@@ -1,30 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import {
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  Maximize,
-  SkipBack,
-  SkipForward,
-  ArrowLeft,
-  CheckCircle,
-  AlertTriangle,
-  Clock,
-  Eye
-} from 'lucide-react';
-import { videosAPI } from '../services/api';
-import io from 'socket.io-client';
+import React, { useState, useRef, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import {Play,Pause,Volume2,VolumeX,Maximize,SkipBack,SkipForward,ArrowLeft,CheckCircle,AlertTriangle,Clock,Eye,
+} from "lucide-react";
+import { videosAPI } from "../services/api";
+import io from "socket.io-client";
 
-const socket = io('http://localhost:5000');
+const socket = io("http://localhost:5000");
 
 const VideoPlayer = () => {
   const { id } = useParams();
   const [videoData, setVideoData] = useState(null);
   const [loading, setLoading] = useState(true);
   const videoRef = useRef(null);
-  
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -39,34 +27,40 @@ const VideoPlayer = () => {
         const data = await videosAPI.getById(id);
         setVideoData(data.video);
       } catch (error) {
-        console.error('Failed to fetch video:', error);
+        console.error("Failed to fetch video:", error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchVideo();
-    
+
     // Increment view count
-    videosAPI.incrementViews(id).catch(err => console.error('Failed to increment views', err));
+    videosAPI
+      .incrementViews(id)
+      .catch((err) => console.error("Failed to increment views", err));
 
     // Listen for updates on this video
-    socket.on('processing-update', (data) => {
+    socket.on("processing-update", (data) => {
       if (data.videoId === id) {
-        setVideoData(prev => ({ ...prev, status: data.status, processingProgress: data.progress }));
+        setVideoData((prev) => ({
+          ...prev,
+          status: data.status,
+          processingProgress: data.progress,
+        }));
       }
     });
 
-    socket.on('processing-complete', (data) => {
-       if (data.videoId === id) {
-          // Re-fetch to get full details like flag reasons
-          fetchVideo();
-       }
+    socket.on("processing-complete", (data) => {
+      if (data.videoId === id) {
+        // Re-fetch to get full details like flag reasons
+        fetchVideo();
+      }
     });
 
     return () => {
-      socket.off('processing-update');
-      socket.off('processing-complete');
+      socket.off("processing-update");
+      socket.off("processing-complete");
     };
   }, [id]);
 
@@ -78,14 +72,14 @@ const VideoPlayer = () => {
     const handleDurationChange = () => setDuration(video.duration);
     const handleEnded = () => setIsPlaying(false);
 
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    video.addEventListener('durationchange', handleDurationChange);
-    video.addEventListener('ended', handleEnded);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("durationchange", handleDurationChange);
+    video.addEventListener("ended", handleEnded);
 
     return () => {
-      video.removeEventListener('timeupdate', handleTimeUpdate);
-      video.removeEventListener('durationchange', handleDurationChange);
-      video.removeEventListener('ended', handleEnded);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("durationchange", handleDurationChange);
+      video.removeEventListener("ended", handleEnded);
     };
   }, [videoData]); // Re-run when videoData (and thus video element source) might change
 
@@ -139,27 +133,39 @@ const VideoPlayer = () => {
   };
 
   const formatTime = (time) => {
-    if (isNaN(time)) return '0:00';
+    if (isNaN(time)) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
   if (loading) {
-    return <div className="text-center py-12 text-gray-500">Loading video...</div>;
+    return (
+      <div className="text-center py-12 text-gray-500">Loading video...</div>
+    );
   }
 
   if (!videoData) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900">Video not found</h2>
-        <Link to="/library" className="text-primary-600 mt-4 inline-block hover:underline">Return to Library</Link>
+        <Link
+          to="/library"
+          className="text-primary-600 mt-4 inline-block hover:underline"
+        >
+          Return to Library
+        </Link>
       </div>
     );
   }
 
-  const canPlay = videoData.status === 'safe' || videoData.status === 'flagged' || videoData.status === 'uploaded';
-  const fileSize = videoData.fileSize ? Math.round(videoData.fileSize/1024/1024) + ' MB' : 'Unknown';
+  const canPlay =
+    videoData.status === "safe" ||
+    videoData.status === "flagged" ||
+    videoData.status === "uploaded";
+  const fileSize = videoData.fileSize
+    ? Math.round(videoData.fileSize / 1024 / 1024) + " MB"
+    : "Unknown";
   const uploadDate = new Date(videoData.uploadDate).toLocaleDateString();
 
   return (
@@ -188,12 +194,17 @@ const VideoPlayer = () => {
                 onClick={togglePlay}
                 poster={videoData.thumbnail}
               >
-                <source src={videosAPI.getStreamUrl(videoData.id)} type="video/mp4" />
+                <source
+                  src={videosAPI.getStreamUrl(videoData.id)}
+                  type="video/mp4"
+                />
                 Your browser does not support the video tag.
               </video>
 
               {/* Video Controls */}
-              <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+              <div
+                className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0"}`}
+              >
                 {/* Progress Bar */}
                 <input
                   type="range"
@@ -211,7 +222,11 @@ const VideoPlayer = () => {
                       onClick={togglePlay}
                       className="text-white hover:text-primary-400 transition-colors"
                     >
-                      {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+                      {isPlaying ? (
+                        <Pause className="h-6 w-6" />
+                      ) : (
+                        <Play className="h-6 w-6" />
+                      )}
                     </button>
 
                     {/* Skip Buttons */}
@@ -234,7 +249,11 @@ const VideoPlayer = () => {
                         onClick={toggleMute}
                         className="text-white hover:text-primary-400 transition-colors"
                       >
-                        {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                        {isMuted ? (
+                          <VolumeX className="h-5 w-5" />
+                        ) : (
+                          <Volume2 className="h-5 w-5" />
+                        )}
                       </button>
                       <input
                         type="range"
@@ -265,16 +284,33 @@ const VideoPlayer = () => {
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-4">
-                {videoData.status === 'processing' ? (
+                {videoData.status === "processing" ? (
                   <>
                     <Clock className="h-16 w-16 text-blue-400 mx-auto animate-spin" />
                     <div>
-                      <h3 className="text-xl font-semibold text-white mb-2">Processing...</h3>
-                      <p className="text-gray-300">This video is currently being processed for sensitivity analysis</p>
+                      <h3 className="text-xl font-semibold text-white mb-2">
+                        Processing...
+                      </h3>
+                      <p className="text-gray-300">
+                        This video is currently being processed for sensitivity
+                        analysis
+                      </p>
                       {videoData.processingProgress !== undefined && (
-                         <div className="w-64 h-2 bg-gray-700 rounded-full mx-auto mt-4 overflow-hidden">
-                           <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${videoData.processingProgress}%` }}></div>
-                         </div>
+                        <div className="w-full max-w-2xl mx-auto mt-4">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={videoData.processingProgress}
+                            readOnly
+                            className="w-full appearance-none h-2 bg-gray-700 rounded-full cursor-default"
+                            onChange={() => {}}
+                          />
+                          <div className="text-center text-sm text-gray-300 mt-2">
+                            Processing:{" "}
+                            {Math.round(videoData.processingProgress)}%
+                          </div>
+                        </div>
                       )}
                     </div>
                   </>
@@ -294,19 +330,19 @@ const VideoPlayer = () => {
           {/* Status Badge */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              {videoData.status === 'safe' && (
+              {videoData.status === "safe" && (
                 <div className="flex items-center space-x-2 text-green-700 bg-green-100 px-4 py-2 rounded-lg border border-green-200">
                   <CheckCircle className="h-5 w-5" />
                   <span className="font-semibold">Safe to Watch</span>
                 </div>
               )}
-              {videoData.status === 'flagged' && (
+              {videoData.status === "flagged" && (
                 <div className="flex items-center space-x-2 text-red-700 bg-red-100 px-4 py-2 rounded-lg border border-red-200">
                   <AlertTriangle className="h-5 w-5" />
                   <span className="font-semibold">Flagged Content</span>
                 </div>
               )}
-              {videoData.status === 'processing' && (
+              {videoData.status === "processing" && (
                 <div className="flex items-center space-x-2 text-blue-700 bg-blue-100 px-4 py-2 rounded-lg border border-blue-200">
                   <Clock className="h-5 w-5" />
                   <span className="font-semibold">Processing</span>
@@ -320,7 +356,7 @@ const VideoPlayer = () => {
           </div>
 
           {/* Flag Reason */}
-          {videoData.status === 'flagged' && videoData.flagReason && (
+          {videoData.status === "flagged" && videoData.flagReason && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <p className="text-sm text-red-800">
                 <strong>Flag Reason:</strong> {videoData.flagReason}
@@ -330,15 +366,21 @@ const VideoPlayer = () => {
 
           {/* Title & Description */}
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{videoData.title}</h1>
-            <p className="text-gray-600 whitespace-pre-line">{videoData.description}</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              {videoData.title}
+            </h1>
+            <p className="text-gray-600 whitespace-pre-line">
+              {videoData.description}
+            </p>
           </div>
 
           {/* Metadata */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
             <div>
               <p className="text-sm text-gray-500 mb-1">Uploaded by</p>
-              <p className="font-semibold text-gray-900">{videoData.uploader_name || 'Unknown'}</p>
+              <p className="font-semibold text-gray-900">
+                {videoData.uploader_name || "Unknown"}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-500 mb-1">Upload Date</p>
@@ -346,7 +388,9 @@ const VideoPlayer = () => {
             </div>
             <div>
               <p className="text-sm text-gray-500 mb-1">Duration</p>
-              <p className="font-semibold text-gray-900">{videoData.duration || 'Unknown'}</p>
+              <p className="font-semibold text-gray-900">
+                {videoData.duration || "Unknown"}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-500 mb-1">File Size</p>
@@ -362,8 +406,9 @@ const VideoPlayer = () => {
           Secure Streaming with HTTP Range Requests
         </h3>
         <p className="text-sm text-purple-800">
-          This video player supports seeking and partial content loading using HTTP range requests, 
-          allowing for efficient streaming and bandwidth optimization.
+          This video player supports seeking and partial content loading using
+          HTTP range requests, allowing for efficient streaming and bandwidth
+          optimization.
         </p>
       </div>
     </div>

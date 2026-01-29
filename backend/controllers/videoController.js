@@ -10,20 +10,22 @@ const processVideo = async (videoId, io) => {
   const video = await Video.findById(videoId);
   if (!video) return;
 
-  io?.emit("processing-update", { videoId, progress: 20, status: "processing" });
+    // mark as processing in DB and notify clients
+    await Video.findByIdAndUpdate(videoId, { status: 'processing', processingProgress: 0 });
+    io?.emit('processing-update', { videoId, progress: 0, status: 'processing' });
 
-  const result = await analyzeVideoSensitivity(video.filepath, videoId);
+    const result = await analyzeVideoSensitivity(video.filepath, videoId, io);
 
-  await Video.findByIdAndUpdate(videoId, {
-    status: result.isSafe ? "safe" : "flagged",
-    processingProgress: 100,
-    flagReason: result.reason || null,
-  });
+    await Video.findByIdAndUpdate(videoId, {
+        status: result.isSafe ? "safe" : "flagged",
+        processingProgress: 100,
+        flagReason: result.reason || null,
+    });
 
-  io?.emit("processing-complete", {
-    videoId,
-    status: result.isSafe ? "safe" : "flagged",
-  });
+    io?.emit("processing-complete", {
+        videoId,
+        status: result.isSafe ? "safe" : "flagged",
+    });
 };
 
 // Upload video
@@ -255,9 +257,20 @@ const deleteVideo = async (req, res) => {
             return res.status(404).json({ error: 'Video not found' });
         }
 
-        // Delete file
-        if (fs.existsSync(video.filepath)) {
-            fs.unlinkSync(video.filepath);
+        // Permission: allow admin or the original uploader
+        const isAdmin = req.user.role === 'admin';
+        const isUploader = video.uploaderId && video.uploaderId.toString() === req.user.id;
+        if (!isAdmin && !isUploader) {
+            return res.status(403).json({ error: 'Insufficient permissions to delete this video' });
+        }
+
+        // Delete file if present
+        try {
+            if (video.filepath && fs.existsSync(video.filepath)) {
+                fs.unlinkSync(video.filepath);
+            }
+        } catch (fileErr) {
+            console.warn('Failed to delete video file:', fileErr);
         }
 
         // Delete from database
